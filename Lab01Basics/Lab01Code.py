@@ -28,25 +28,33 @@ import petlib
 # and decryption using the functions in petlib.cipher.
 
 from os import urandom
+
+import pytest
 from petlib.cipher import Cipher
+from pytest import raises
+
 
 def encrypt_message(K, message):
     """ Encrypt a message under a key K """
 
     plaintext = message.encode("utf8")
-    
-    ## YOUR CODE HERE
+    aes = Cipher("aes-256-gcm")
+    iv = urandom(32)
+    ciphertext, tag = aes.quick_gcm_enc(K, iv, plaintext)
 
-    return (iv, ciphertext, tag)
+    return iv, ciphertext, tag
+
 
 def decrypt_message(K, iv, ciphertext, tag):
     """ Decrypt a cipher text under a key K 
 
         In case the decryption fails, throw an exception.
     """
-    ## YOUR CODE HERE
+    aes = Cipher("aes-256-gcm")
+    plain = aes.quick_gcm_dec(K, iv, ciphertext, tag)
 
     return plain.encode("utf8")
+
 
 #####################################################
 # TASK 3 -- Understand Elliptic Curve Arithmetic
@@ -76,13 +84,13 @@ def is_point_on_curve(a, b, p, x, y):
     assert isinstance(b, Bn)
     assert isinstance(p, Bn) and p > 0
     assert (isinstance(x, Bn) and isinstance(y, Bn)) \
-           or (x == None and y == None)
+           or (x is None and y is None)
 
-    if x == None and y == None:
+    if x is None and y is None:
         return True
 
     lhs = (y * y) % p
-    rhs = (x*x*x + a*x + b) % p
+    rhs = (x * x * x + a * x + b) % p
     on_curve = (lhs == rhs)
 
     return on_curve
@@ -91,6 +99,7 @@ def is_point_on_curve(a, b, p, x, y):
 def point_add(a, b, p, x0, y0, x1, y1):
     """Define the "addition" operation for 2 EC Points.
 
+    y^2 = x^3 + ax + b (mod p)
     Reminder: (xr, yr) = (xq, yq) + (xp, yp)
     is defined as:
         lam = (yq - yp) * (xq - xp)^-1 (mod p)
@@ -99,11 +108,23 @@ def point_add(a, b, p, x0, y0, x1, y1):
 
     Return the point resulting from the addition. Raises an Exception if the points are equal.
     """
+    if not is_point_on_curve(a, b, p, x0, y0) or not is_point_on_curve(a, b, p, x1, y1):
+        raise Exception("Not on curve")
+    if x0 is None and y0 is None:
+        return x1, y1
+    if x1 is None and y1 is None:
+        return x0, y0
+    if x0 == x1 and y0 == y1:
+        raise Exception("EC Points must not be equal")
+    if x0 == x1 and y0 != y1:
+        return None, None
 
-    # ADD YOUR CODE BELOW
-    xr, yr = None, None
-    
-    return (xr, yr)
+    lam = ((y0 - y1) * (x0 - x1).mod_inverse(p)) % p
+    xr = (pow(lam, 2, p) - x1 - x0) % p
+    yr = (lam * (x1 - xr) - y1) % p
+
+    return xr, yr
+
 
 def point_double(a, b, p, x, y):
     """Define "doubling" an EC point.
@@ -115,12 +136,15 @@ def point_double(a, b, p, x, y):
         yr  = lam * (xp - xr) - yp (mod p)
 
     Returns the point representing the double of the input (x, y).
-    """  
+    """
+    if x is None and y is None:
+        return None, None
 
-    # ADD YOUR CODE BELOW
-    xr, yr = None, None
-
+    lam = ((3 * pow(x, 2, p) + a) * (2 * y).mod_inverse(p)) % p
+    xr = (pow(lam, 2, p) - 2 * x) % p
+    yr = (lam * (x - xr) - y) % p
     return xr, yr
+
 
 def point_scalar_multiplication_double_and_add(a, b, p, x, y, scalar):
     """
@@ -140,9 +164,11 @@ def point_scalar_multiplication_double_and_add(a, b, p, x, y, scalar):
     P = (x, y)
 
     for i in range(scalar.num_bits()):
-        pass ## ADD YOUR CODE HERE
-
+        if scalar.is_bit_set(i):
+            Q = point_add(a, b, p, Q[0], Q[1], P[0], P[1])
+        P = point_double(a, b, p, P[0], P[1])
     return Q
+
 
 def point_scalar_multiplication_montgomerry_ladder(a, b, p, x, y, scalar):
     """
@@ -165,8 +191,13 @@ def point_scalar_multiplication_montgomerry_ladder(a, b, p, x, y, scalar):
     R0 = (None, None)
     R1 = (x, y)
 
-    for i in reversed(range(0,scalar.num_bits())):
-        pass ## ADD YOUR CODE HERE
+    for i in reversed(range(0, scalar.num_bits())):
+        if scalar.is_bit_set(i):
+            R0 = point_add(a, b, p, R0[0], R0[1], R1[0], R1[1])
+            R1 = point_double(a, b, p, R1[0], R1[1])
+        else:
+            R1 = point_add(a, b, p, R0[0], R0[1], R1[0], R1[1])
+            R0 = point_double(a, b, p, R0[0], R0[1])
 
     return R0
 
@@ -183,30 +214,31 @@ from hashlib import sha256
 from petlib.ec import EcGroup
 from petlib.ecdsa import do_ecdsa_sign, do_ecdsa_verify
 
+
 def ecdsa_key_gen():
     """ Returns an EC group, a random private key for signing 
         and the corresponding public key for verification"""
     G = EcGroup()
     priv_sign = G.order().random()
     pub_verify = priv_sign * G.generator()
-    return (G, priv_sign, pub_verify)
+    return G, priv_sign, pub_verify
 
 
 def ecdsa_sign(G, priv_sign, message):
     """ Sign the SHA256 digest of the message using ECDSA and return a signature """
-    plaintext =  message.encode("utf8")
-
-    ## YOUR CODE HERE
-
+    plaintext = message.encode("utf8")
+    digest = sha256(plaintext).digest()
+    sig = do_ecdsa_sign(G, priv_sign, digest)
     return sig
+
 
 def ecdsa_verify(G, pub_verify, message, sig):
     """ Verify the ECDSA signature on the message """
-    plaintext =  message.encode("utf8")
-
-    ## YOUR CODE HERE
-
+    plaintext = message.encode("utf8")
+    digest = sha256(plaintext).digest()
+    res = do_ecdsa_verify(G, pub_verify, sig, digest)
     return res
+
 
 #####################################################
 # TASK 5 -- Diffie-Hellman Key Exchange and Derivation
@@ -221,10 +253,10 @@ def dh_get_key():
     G = EcGroup()
     priv_dec = G.order().random()
     pub_enc = priv_dec * G.generator()
-    return (G, priv_dec, pub_enc)
+    return G, priv_dec, pub_enc
 
 
-def dh_encrypt(pub, message, aliceSig = None):
+def dh_encrypt(pub, message, aliceSig=None):
     """ Assume you know the public key of someone else (Bob), 
     and wish to Encrypt a message for them.
         - Generate a fresh DH key for this message.
@@ -232,31 +264,74 @@ def dh_encrypt(pub, message, aliceSig = None):
         - Use the shared key to AES_GCM encrypt the message.
         - Optionally: sign the message with Alice's key.
     """
-    
-    ## YOUR CODE HERE
-    pass
+    G, priv_dec, pub_enc = dh_get_key()
 
-def dh_decrypt(priv, ciphertext, aliceVer = None):
+    shared_key = pub.pt_mul(priv_dec)  # computed shared secret
+    derived_key = sha256(shared_key.export()).digest()  # derive a 256-bit key to use with encrypt_message
+
+    iv, ciphertext, tag = encrypt_message(derived_key, message)
+    return iv, ciphertext, tag, pub_enc
+
+
+def dh_decrypt(priv, ciphertext, aliceVer=None):
     """ Decrypt a received message encrypted using your public key, 
     of which the private key is provided. Optionally verify 
     the message came from Alice using her verification key."""
-    
-    ## YOUR CODE HERE
-    pass
+    iv, ciphertext, tag, pub = ciphertext
 
-## NOTE: populate those (or more) tests
+    shared_key = pub.pt_mul(priv)
+    derived_key = sha256(shared_key.export()).digest()
+    return decrypt_message(derived_key, iv, ciphertext, tag)
+
+
+# NOTE: populate those (or more) tests
 #  ensure they run using the "py.test filename" command.
 #  What is your test coverage? Where is it missing cases?
 #  $ py.test-2.7 --cov-report html --cov Lab01Code Lab01Code.py 
 
+@pytest.mark.task5
 def test_encrypt():
-    assert False
+    G, priv_dec, pub_enc = dh_get_key()  # get Bob's key
+    message = "message"
+    iv, ciphertext, tag, pub = dh_encrypt(pub_enc, message)
 
+    assert len(ciphertext) == len(message)
+
+@pytest.mark.task5
 def test_decrypt():
-    assert False
+    G, priv_dec, pub_enc = dh_get_key()  # get Bob's key
+    message = "message"
+    iv, ciphertext, tag, pub = dh_encrypt(pub_enc, message)
+    decrypted = dh_decrypt(priv_dec, (iv, ciphertext, tag, pub))
 
+    assert message == decrypted
+
+@pytest.mark.task5
 def test_fails():
-    assert False
+    G, priv_dec, pub_enc = dh_get_key()  # get Bob's key
+    message = "message"
+    iv, ciphertext, tag, pub = dh_encrypt(pub_enc, message)
+
+    with raises(Exception) as excinfo:
+        dh_decrypt(priv_dec, (iv, urandom(len(ciphertext)), tag, pub))
+    assert 'decryption failed' in str(excinfo.value)
+
+    with raises(Exception) as excinfo:
+        dh_decrypt(priv_dec, (iv, ciphertext, urandom(len(tag)), pub))
+    assert 'decryption failed' in str(excinfo.value)
+
+    with raises(Exception) as excinfo:
+        dh_decrypt(priv_dec, (urandom(len(iv)), ciphertext, tag, pub))
+    assert 'decryption failed' in str(excinfo.value)
+
+    with raises(Exception) as excinfo:
+        dh_decrypt(priv_dec, (iv, ciphertext, tag, G.order().random() * G.generator()))
+    assert 'decryption failed' in str(excinfo.value)
+
+    with raises(Exception) as excinfo:
+        dh_decrypt(G.order().random(), (iv, ciphertext, tag, pub))
+    assert 'decryption failed' in str(excinfo.value)
+
 
 #####################################################
 # TASK 6 -- Time EC scalar multiplication

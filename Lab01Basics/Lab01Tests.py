@@ -24,6 +24,7 @@ try:
 except:
     from Lab01Code import *
 
+
 @pytest.mark.task1
 def test_petlib_present():
     """
@@ -31,9 +32,10 @@ def test_petlib_present():
     present on the system, and accessible to the python 
     environment
     """
-    import petlib 
+    import petlib
     import pytest
     assert True
+
 
 @pytest.mark.task1
 def test_code_present():
@@ -60,6 +62,7 @@ def test_gcm_encrypt():
     assert len(ciphertext) == len(message)
     assert len(tag) == 16
 
+
 @pytest.mark.task2
 def test_gcm_decrypt():
     """ Tests decryption with AES-GCM """
@@ -74,6 +77,7 @@ def test_gcm_decrypt():
 
     m = decrypt_message(K, iv, ciphertext, tag)
     assert m == message
+
 
 @pytest.mark.task2
 def test_gcm_fails():
@@ -116,9 +120,9 @@ def test_on_curve():
 
     """
 
-    ## Example on how to define a curve
+    # Example on how to define a curve
     from petlib.ec import EcGroup, EcPt
-    G = EcGroup(713) # NIST curve
+    G = EcGroup(713)  # NIST curve
     d = G.parameters()
     a, b, p = d["a"], d["b"], d["p"]
     g = G.generator()
@@ -129,6 +133,7 @@ def test_on_curve():
 
     assert is_point_on_curve(a, b, p, None, None)
 
+
 @pytest.mark.task3
 def test_Point_addition():
     """
@@ -136,14 +141,14 @@ def test_Point_addition():
     """
     from pytest import raises
     from petlib.ec import EcGroup, EcPt
-    G = EcGroup(713) # NIST curve
+    G = EcGroup(713)  # NIST curve
     d = G.parameters()
     a, b, p = d["a"], d["b"], d["p"]
     g = G.generator()
     gx0, gy0 = g.get_affine()
 
     r = G.order().random()
-    gx1, gy1 = (r*g).get_affine()
+    gx1, gy1 = (r * g).get_affine()
 
     assert is_point_on_curve(a, b, p, gx0, gy0)
     assert is_point_on_curve(a, b, p, gx1, gy1)
@@ -157,27 +162,28 @@ def test_Point_addition():
     assert x == hx1
     assert y == hy1
 
-    ## Ensure commutativity
+    # Ensure commutativity
     xp, yp = point_add(a, b, p, gx1, gy1, gx0, gy0)
     assert is_point_on_curve(a, b, p, xp, yp)
     assert x == xp
     assert y == yp
 
-    ## Ensure addition with neutral returns the element
+    # Ensure addition with neutral returns the element
     xp, yp = point_add(a, b, p, gx1, gy1, None, None)
     assert is_point_on_curve(a, b, p, xp, yp)
     assert xp == gx1
     assert yp == gy1
-    
+
     xp, yp = point_add(a, b, p, None, None, gx0, gy0)
     assert is_point_on_curve(a, b, p, xp, yp)
     assert gx0 == xp
     assert gy0 == yp
 
-    ## An error is raised in case the points are equal
+    # An error is raised in case the points are equal
     with raises(Exception) as excinfo:
         point_add(a, b, p, gx0, gy0, gx0, gy0)
     assert 'EC Points must not be equal' in str(excinfo.value)
+
 
 @pytest.mark.task3
 def test_Point_addition_check_inf_result():
@@ -186,21 +192,19 @@ def test_Point_addition_check_inf_result():
     """
     from pytest import raises
     from petlib.ec import EcGroup, EcPt
-    G = EcGroup(713) # NIST curve
+    G = EcGroup(713)  # NIST curve
     d = G.parameters()
     a, b, p = d["a"], d["b"], d["p"]
     g = G.generator()
     gx0, gy0 = g.get_affine()
     gx1, gy1 = gx0, p - gy0
 
-
     assert is_point_on_curve(a, b, p, gx0, gy0)
     assert is_point_on_curve(a, b, p, gx1, gy1)
 
     x, y = point_add(a, b, p, gx0, gy0, gx1, gy1)
     assert is_point_on_curve(a, b, p, x, y)
-    assert (x,y) == (None, None)
-
+    assert (x, y) == (None, None)
 
 
 @pytest.mark.task3
@@ -211,14 +215,13 @@ def test_Point_doubling():
 
     from pytest import raises
     from petlib.ec import EcGroup, EcPt
-    G = EcGroup(713) # NIST curve
+    G = EcGroup(713)  # NIST curve
     d = G.parameters()
     a, b, p = d["a"], d["b"], d["p"]
     g = G.generator()
     gx0, gy0 = g.get_affine()
 
-    gx2, gy2 = (2*g).get_affine()
-
+    gx2, gy2 = (2 * g).get_affine()
 
     x2, y2 = point_double(a, b, p, gx0, gy0)
     assert is_point_on_curve(a, b, p, x2, y2)
@@ -228,6 +231,7 @@ def test_Point_doubling():
     assert is_point_on_curve(a, b, p, x2, y2)
     assert x2 == None and y2 == None
 
+
 @pytest.mark.task3
 def test_Point_scalar_mult_double_and_add():
     """
@@ -236,20 +240,20 @@ def test_Point_scalar_mult_double_and_add():
 
     from pytest import raises
     from petlib.ec import EcGroup, EcPt
-    G = EcGroup(713) # NIST curve
+    G = EcGroup(713)  # NIST curve
     d = G.parameters()
     a, b, p = d["a"], d["b"], d["p"]
     g = G.generator()
     gx0, gy0 = g.get_affine()
     r = G.order().random()
 
-    gx2, gy2 = (r*g).get_affine()
-
+    gx2, gy2 = (r * g).get_affine()
 
     x2, y2 = point_scalar_multiplication_double_and_add(a, b, p, gx0, gy0, r)
     assert is_point_on_curve(a, b, p, x2, y2)
     assert gx2 == x2
     assert gy2 == y2
+
 
 @pytest.mark.task3
 def test_Point_scalar_mult_montgomerry_ladder():
@@ -259,7 +263,7 @@ def test_Point_scalar_mult_montgomerry_ladder():
 
     from pytest import raises
     from petlib.ec import EcGroup, EcPt
-    G = EcGroup(713) # NIST curve
+    G = EcGroup(713)  # NIST curve
     d = G.parameters()
     a, b, p = d["a"], d["b"], d["p"]
     g = G.generator()
@@ -267,20 +271,20 @@ def test_Point_scalar_mult_montgomerry_ladder():
 
     r = G.order().random()
 
-    gx2, gy2 = (r*g).get_affine()
-
+    gx2, gy2 = (r * g).get_affine()
 
     x2, y2 = point_scalar_multiplication_montgomerry_ladder(a, b, p, gx0, gy0, r)
     assert is_point_on_curve(a, b, p, x2, y2)
     assert gx2 == x2
     assert gy2 == y2
 
+
 #####################################################
 # TASK 4 -- Standard ECDSA signatures
 #
-#          - Implement a key / param generation 
+#          - Implement a key / param generation
 #          - Implement ECDSA signature using petlib.ecdsa
-#          - Implement ECDSA signature verification 
+#          - Implement ECDSA signature verification
 #            using petlib.ecdsa
 
 @pytest.mark.task4
@@ -288,6 +292,7 @@ def test_key_gen():
     """ Tests the key generation of ECDSA"""
     from Lab01Code import ecdsa_key_gen
     G, priv, pub = ecdsa_key_gen()
+
 
 @pytest.mark.task4
 def test_produce_signature():
@@ -299,6 +304,7 @@ def test_produce_signature():
     sig = ecdsa_sign(G, priv, msg)
     assert True
 
+
 @pytest.mark.task4
 def test_check_signature():
     """ Tests signature and verification function """
@@ -308,6 +314,7 @@ def test_check_signature():
 
     sig = ecdsa_sign(G, priv, msg)
     assert ecdsa_verify(G, pub, msg, sig)
+
 
 @pytest.mark.task4
 def test_check_fail():
