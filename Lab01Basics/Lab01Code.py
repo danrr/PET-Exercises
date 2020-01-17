@@ -110,13 +110,18 @@ def point_add(a, b, p, x0, y0, x1, y1):
     """
     if not is_point_on_curve(a, b, p, x0, y0) or not is_point_on_curve(a, b, p, x1, y1):
         raise Exception("Not on curve")
+    # Infinity(None, None) is the identity element, we can just return the other point
     if x0 is None and y0 is None:
         return x1, y1
     if x1 is None and y1 is None:
         return x0, y0
+
+    # use point doubling instead
     if x0 == x1 and y0 == y1:
         raise Exception("EC Points must not be equal")
-    if x0 == x1 and y0 != y1:
+
+    # The points are on the same vertical line,
+    if x0 == x1 and y0 == -y1:
         return None, None
 
     lam = ((y0 - y1) * (x0 - x1).mod_inverse(p)) % p
