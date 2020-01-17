@@ -297,6 +297,7 @@ def test_encrypt():
 
     assert len(ciphertext) == len(message)
 
+
 @pytest.mark.task5
 def test_decrypt():
     G, priv_dec, pub_enc = dh_get_key()  # get Bob's key
@@ -305,6 +306,7 @@ def test_decrypt():
     decrypted = dh_decrypt(priv_dec, (iv, ciphertext, tag, pub))
 
     assert message == decrypted
+
 
 @pytest.mark.task5
 def test_fails():
