@@ -34,23 +34,23 @@ from petlib.cipher import Cipher
 from pytest import raises
 
 
-def encrypt_message(K, message):
+def encrypt_message(K, message, key_length=16):
     """ Encrypt a message under a key K """
 
     plaintext = message.encode("utf8")
-    aes = Cipher("aes-256-gcm")
-    iv = urandom(32)
+    aes = Cipher("aes-{}-gcm".format(key_length*8))
+    iv = urandom(key_length)
     ciphertext, tag = aes.quick_gcm_enc(K, iv, plaintext)
 
     return iv, ciphertext, tag
 
 
-def decrypt_message(K, iv, ciphertext, tag):
+def decrypt_message(K, iv, ciphertext, tag, key_length=16):
     """ Decrypt a cipher text under a key K 
 
         In case the decryption fails, throw an exception.
     """
-    aes = Cipher("aes-256-gcm")
+    aes = Cipher("aes-{}-gcm".format(key_length*8))
     plain = aes.quick_gcm_dec(K, iv, ciphertext, tag)
 
     return plain.encode("utf8")
@@ -120,8 +120,8 @@ def point_add(a, b, p, x0, y0, x1, y1):
     if x0 == x1 and y0 == y1:
         raise Exception("EC Points must not be equal")
 
-    # The points are on the same vertical line,
-    if x0 == x1 and y0 == -y1:
+    # The points are negations of each other, so we return Infinity
+    if x0 == x1 and y0 == -y1 % p:
         return None, None
 
     lam = ((y0 - y1) * (x0 - x1).mod_inverse(p)) % p
@@ -274,7 +274,7 @@ def dh_encrypt(pub, message, aliceSig=None):
     shared_key = pub.pt_mul(priv_dec)  # computed shared secret
     derived_key = sha256(shared_key.export()).digest()  # derive a 256-bit key to use with encrypt_message
 
-    iv, ciphertext, tag = encrypt_message(derived_key, message)
+    iv, ciphertext, tag = encrypt_message(derived_key, message, key_length=32)
     return iv, ciphertext, tag, pub_enc
 
 
@@ -286,7 +286,7 @@ def dh_decrypt(priv, ciphertext, aliceVer=None):
 
     shared_key = pub.pt_mul(priv)
     derived_key = sha256(shared_key.export()).digest()
-    return decrypt_message(derived_key, iv, ciphertext, tag)
+    return decrypt_message(derived_key, iv, ciphertext, tag, key_length=32)
 
 
 # NOTE: populate those (or more) tests
