@@ -21,6 +21,7 @@ from hashlib import sha512
 from struct import pack, unpack
 from binascii import hexlify
 
+
 def aes_ctr_enc_dec(key, iv, input):
     """ A helper function that implements AES Counter (CTR) Mode encryption and decryption. 
     Expects a key (16 byte), and IV (16 bytes) and an input plaintext / ciphertext.
@@ -28,14 +29,15 @@ def aes_ctr_enc_dec(key, iv, input):
     If it is not obvious convince yourself that CTR encryption and decryption are in 
     fact the same operations.
     """
-    
-    aes = Cipher("AES-128-CTR") 
+
+    aes = Cipher("AES-128-CTR")
 
     enc = aes.enc(key, iv)
     output = enc.update(input)
     output += enc.finalize()
 
     return output
+
 
 #####################################################
 # TASK 2 -- Build a simple 1-hop mix client.
@@ -44,14 +46,15 @@ def aes_ctr_enc_dec(key, iv, input):
 
 
 ## This is the type of messages destined for the one-hop mix
-OneHopMixMessage = namedtuple('OneHopMixMessage', ['ec_public_key', 
-                                                   'hmac', 
-                                                   'address', 
+OneHopMixMessage = namedtuple('OneHopMixMessage', ['ec_public_key',
+                                                   'hmac',
+                                                   'address',
                                                    'message'])
 
 from petlib.ec import EcGroup
 from petlib.hmac import Hmac, secure_compare
 from petlib.cipher import Cipher
+
 
 def mix_server_one_hop(private_key, message_list):
     """ Implements the decoding for a simple one-hop mix. 
@@ -71,10 +74,10 @@ def mix_server_one_hop(private_key, message_list):
 
         ## Check elements and lengths
         if not G.check_point(msg.ec_public_key) or \
-               not len(msg.hmac) == 20 or \
-               not len(msg.address) == 258 or \
-               not len(msg.message) == 1002:
-           raise Exception("Malformed input message")
+                not len(msg.hmac) == 20 or \
+                not len(msg.address) == 258 or \
+                not len(msg.message) == 1002:
+            raise Exception("Malformed input message")
 
         ## First get a shared key
         shared_element = private_key * msg.ec_public_key
@@ -86,7 +89,7 @@ def mix_server_one_hop(private_key, message_list):
         message_key = key_material[32:48]
 
         ## Check the HMAC
-        h = Hmac(b"sha512", hmac_key)        
+        h = Hmac(b"sha512", hmac_key)
         h.update(msg.address)
         h.update(msg.message)
         expected_mac = h.digest()
@@ -95,7 +98,7 @@ def mix_server_one_hop(private_key, message_list):
             raise Exception("HMAC check failure")
 
         ## Decrypt the address and the message
-        iv = b"\x00"*16
+        iv = b"\x00" * 16
 
         address_plaintext = aes_ctr_enc_dec(address_key, iv, msg.address)
         message_plaintext = aes_ctr_enc_dec(message_key, iv, msg.message)
@@ -108,8 +111,8 @@ def mix_server_one_hop(private_key, message_list):
         out_queue += [output]
 
     return sorted(out_queue)
-        
-        
+
+
 def mix_client_one_hop(public_key, address, message):
     """
     Encode a message to travel through a single mix with a set public key. 
@@ -130,13 +133,28 @@ def mix_client_one_hop(public_key, address, message):
 
     ## Generate a fresh public key
     private_key = G.order().random()
-    client_public_key  = private_key * G.generator()
+    client_public_key = private_key * G.generator()
 
-    ## ADD CODE HERE
+    shared_element = private_key * public_key
+    key_material = sha512(shared_element.export()).digest()
+
+    hmac_key = key_material[:16]
+    address_key = key_material[16:32]
+    message_key = key_material[32:48]
+
+    iv = b"\x00" * 16
+
+    address_cipher = aes_ctr_enc_dec(address_key, iv, address_plaintext)
+    message_cipher = aes_ctr_enc_dec(message_key, iv, message_plaintext)
+
+    h = Hmac(b"sha512", hmac_key)
+    h.update(address_cipher)
+    h.update(message_cipher)
+    expected_mac = h.digest()
+    expected_mac = expected_mac[:20]
 
     return OneHopMixMessage(client_public_key, expected_mac, address_cipher, message_cipher)
 
-    
 
 #####################################################
 # TASK 3 -- Build a n-hop mix client.
@@ -146,10 +164,10 @@ def mix_client_one_hop(public_key, address, message):
 from petlib.ec import Bn
 
 # This is the type of messages destined for the n-hop mix
-NHopMixMessage = namedtuple('NHopMixMessage', ['ec_public_key', 
-                                                   'hmacs', 
-                                                   'address', 
-                                                   'message'])
+NHopMixMessage = namedtuple('NHopMixMessage', ['ec_public_key',
+                                               'hmacs',
+                                               'address',
+                                               'message'])
 
 
 def mix_server_n_hop(private_key, message_list, final=False):
@@ -173,11 +191,11 @@ def mix_server_n_hop(private_key, message_list, final=False):
 
         ## Check elements and lengths
         if not G.check_point(msg.ec_public_key) or \
-               not isinstance(msg.hmacs, list) or \
-               not len(msg.hmacs[0]) == 20 or \
-               not len(msg.address) == 258 or \
-               not len(msg.message) == 1002:
-           raise Exception("Malformed input message")
+                not isinstance(msg.hmacs, list) or \
+                not len(msg.hmacs[0]) == 20 or \
+                not len(msg.address) == 258 or \
+                not len(msg.message) == 1002:
+            raise Exception("Malformed input message")
 
         ## First get a shared key
         shared_element = private_key * msg.ec_public_key
@@ -207,20 +225,20 @@ def mix_server_n_hop(private_key, message_list, final=False):
             raise Exception("HMAC check failure")
 
         ## Decrypt the hmacs, address and the message
-        aes = Cipher("AES-128-CTR") 
+        aes = Cipher("AES-128-CTR")
 
         # Decrypt hmacs
         new_hmacs = []
         for i, other_mac in enumerate(msg.hmacs[1:]):
             # Ensure the IV is different for each hmac
-            iv = pack("H14s", i, b"\x00"*14)
+            iv = pack("H14s", i, b"\x00" * 14)
 
             hmac_plaintext = aes_ctr_enc_dec(hmac_key, iv, other_mac)
             new_hmacs += [hmac_plaintext]
 
         # Decrypt address & message
-        iv = b"\x00"*16
-        
+        iv = b"\x00" * 16
+
         address_plaintext = aes_ctr_enc_dec(address_key, iv, msg.address)
         message_plaintext = aes_ctr_enc_dec(message_key, iv, msg.message)
 
@@ -259,12 +277,11 @@ def mix_client_n_hop(public_keys, address, message):
 
     ## Generate a fresh public key
     private_key = G.order().random()
-    client_public_key  = private_key * G.generator()
+    client_public_key = private_key * G.generator()
 
     ## ADD CODE HERE
 
     return NHopMixMessage(client_public_key, hmacs, address_cipher, message_cipher)
-
 
 
 #####################################################
@@ -275,6 +292,7 @@ def mix_client_n_hop(public_keys, address, message):
 
 import random
 
+
 def generate_trace(number_of_users, threshold_size, number_of_rounds, targets_friends):
     """ Generate a simulated trace of traffic. """
     target = 0
@@ -284,17 +302,17 @@ def generate_trace(number_of_users, threshold_size, number_of_rounds, targets_fr
     trace = []
     ## Generate traces in which Alice (user 0) is not sending
     for _ in range(number_of_rounds // 2):
-        senders = sorted(random.sample( others, threshold_size))
-        receivers = sorted(random.sample( all_users, threshold_size))
+        senders = sorted(random.sample(others, threshold_size))
+        receivers = sorted(random.sample(all_users, threshold_size))
 
         trace += [(senders, receivers)]
 
     ## Generate traces in which Alice (user 0) is sending
     for _ in range(number_of_rounds // 2):
-        senders = sorted([0] + random.sample( others, threshold_size-1))
+        senders = sorted([0] + random.sample(others, threshold_size - 1))
         # Alice sends to a friend
         friend = random.choice(targets_friends)
-        receivers = sorted([friend] + random.sample( all_users, threshold_size-1))
+        receivers = sorted([friend] + random.sample(all_users, threshold_size - 1))
 
         trace += [(senders, receivers)]
 
@@ -303,6 +321,7 @@ def generate_trace(number_of_users, threshold_size, number_of_rounds, targets_fr
 
 
 from collections import Counter
+
 
 def analyze_trace(trace, target_number_of_friends, target=0):
     """ 
@@ -315,15 +334,14 @@ def analyze_trace(trace, target_number_of_friends, target=0):
 
     return []
 
-## TASK Q1 (Question 1): The mix packet format you worked on uses AES-CTR with an IV set to all zeros. 
+
+## TASK Q1 (Question 1): The mix packet format you worked on uses AES-CTR with an IV set to all zeros.
 #                        Explain whether this is a security concern and justify your answer.
 
 """ TODO: Your answer HERE """
 
-
-## TASK Q2 (Question 2): What assumptions does your implementation of the Statistical Disclosure Attack 
+## TASK Q2 (Question 2): What assumptions does your implementation of the Statistical Disclosure Attack
 #                        makes about the distribution of traffic from non-target senders to receivers? Is
 #                        the correctness of the result returned dependent on this background distribution?
 
 """ TODO: Your answer HERE """
-
