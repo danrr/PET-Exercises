@@ -178,10 +178,14 @@ def encode_vote(params, pub, vote):
         ciphertexts representing the count of votes for
         zero and the votes for one."""
     assert vote in [0, 1]
+    if vote == 0:
+        c0, c1 = 1, 0
+    else:
+        c0, c1 = 0, 1
+    v0 = encrypt(params, pub, c0)
+    v1 = encrypt(params, pub, c1)
 
-    # ADD CODE HERE
-
-    return (v0, v1)
+    return v0, v1
 
 
 def process_votes(params, pub, encrypted_votes):
@@ -189,7 +193,10 @@ def process_votes(params, pub, encrypted_votes):
         to sum votes for zeros and votes for ones. """
     assert isinstance(encrypted_votes, list)
 
-    # ADD CODE HERE
+    tv0, tv1 = encrypted_votes[0]
+    for v0, v1 in encrypted_votes[1:]:
+        tv0 = add(params, pub, tv0, v0)
+        tv1 = add(params, pub, tv1, v1)
 
     return tv0, tv1
 
