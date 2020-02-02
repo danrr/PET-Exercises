@@ -103,10 +103,9 @@ def add(params, pub, c1, c2):
     """
     assert isCiphertext(params, c1)
     assert isCiphertext(params, c2)
-
-    # ADD CODE HERE
-
-    return c3
+    a1, b1 = c1
+    a2, b2 = c2
+    return a1 + a2, b1 +b2
 
 
 def mul(params, pub, c1, alpha):
@@ -114,9 +113,9 @@ def mul(params, pub, c1, alpha):
         product of the plaintext time alpha """
     assert isCiphertext(params, c1)
 
-    # ADD CODE HERE
+    a1, b1 = c1
 
-    return c3
+    return alpha*a1, alpha*b1
 
 
 #####################################################
