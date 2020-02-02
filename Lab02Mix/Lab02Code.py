@@ -373,19 +373,34 @@ def analyze_trace(trace, target_number_of_friends, target=0):
     return the list of receiver identifiers that are the most likely 
     friends of the target.
     """
+    potential_friend = Counter()
+    # we use the definition of statistical disclosure attacks from George Danezis' paper
+    # as we are looking for a specific number of friends over all traces, we do not need to
+    # compute the vector that approximates the distribution of Alice's friend, so we can skip
+    # the parts that are not specific to each receiver. As such we can just sum over the
+    # traces that Alice participates in and take the highest values to find the likeliest friends
+    for senders, receivers in trace:
+        if target in senders:  # receivers in rounds Alice sends
+            for receiver in receivers:
+                potential_friend[receiver] += 1
+    return [x for x, _ in potential_friend.most_common(target_number_of_friends)]
 
-    ## ADD CODE HERE
 
-    return []
-
-
-## TASK Q1 (Question 1): The mix packet format you worked on uses AES-CTR with an IV set to all zeros.
+# TASK Q1 (Question 1): The mix packet format you worked on uses AES-CTR with an IV set to all zeros.
 #                        Explain whether this is a security concern and justify your answer.
 
-""" TODO: Your answer HERE """
+""" A random IV introduces non-determinism to the encryption so that key re-use does not lead to
+the same message generating the same ciphertext each time. This prevents a range of attacks, including
+frequency attacks, or an attacker being able to know when a message for which the ciphertext is known is 
+sent again. In our particular example, keys are generated before each use, and therefore we are less at 
+risk, but we are dependant on the keys being distinct and the algorithm for generating them random to avoid
+key re-use"""
 
-## TASK Q2 (Question 2): What assumptions does your implementation of the Statistical Disclosure Attack
+# TASK Q2 (Question 2): What assumptions does your implementation of the Statistical Disclosure Attack
 #                        makes about the distribution of traffic from non-target senders to receivers? Is
 #                        the correctness of the result returned dependent on this background distribution?
 
-""" TODO: Your answer HERE """
+""" We assume that traffic is distributed uniformly between target and friends, and non-target senders and all
+ receivers. We also assume that each sender and each receiver only deal with one message per round.
+ If the underlying distribution is not uniform the implementation of SDA will fail to correctly identify
+ the set of Alice's friends as the counts will be skewed towards the most popular receivers overall"""
