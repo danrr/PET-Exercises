@@ -126,8 +126,9 @@ def mul(params, pub, c1, alpha):
 def groupKey(params, pubKeys=[]):
     """ Generate a group public key from a list of public keys """
     (G, g, h, o) = params
-
-    # ADD CODE HERE
+    pub = pubKeys[0]
+    for key in pubKeys[1:]:
+        pub += key
 
     return pub
 
@@ -137,7 +138,9 @@ def partialDecrypt(params, priv, ciphertext, final=False):
         If final is True, then return the plaintext. """
     assert isCiphertext(params, ciphertext)
 
-    # ADD CODE HERE
+    a1, b1 = ciphertext
+
+    b1 -= priv * a1
 
     if final:
         return logh(params, b1)
