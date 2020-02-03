@@ -249,15 +249,27 @@ def simulate_poll(votes):
 # What is the advantage of the adversary in guessing b given your implementation of 
 # Homomorphic addition? What are the security implications of this?
 
-""" Your Answer here """
+""" The encryption is non-deterministic as it has a random component. As such, 
+the adversary having knowledge of Ca, Cb, Cc, and their homomorhpic sums does 
+not help A gain any additional advantage. To be able to determine which two
+plaintexts were summed then encrypted, an adversary would need to be able to 
+break the encryption system. We have a sketch of a reduction, which shows that 
+our scheme's homomorphic property does not weaken the security guarantees it
+provides. Therefore, we can have secure schemes that are homomorphic."""
 
 ###########################################################
 # TASK Q2 -- Answer questions regarding your implementation
 #
 # Given your implementation of the private poll in TASK 5, how
-# would a malicious user implement encode_vote to (a) distrupt the
+# would a malicious user implement encode_vote to (a) disrupt the
 # poll so that it yields no result, or (b) manipulate the poll so 
 # that it yields an arbitrary result. Can those malicious actions 
 # be detected given your implementation?
 
-""" Your Answer here """
+""" To disrupt the voting: use a different public key, and thus it will not 
+be possible for an honest user to decrypt the totals. This is detectable.
+
+To create arbitrary results: instead of encrypting the real values of the vote,
+one can just encrypt the result of a coin toss. To anyone unable to see the
+original values of the votes (ie. the polling authority in this case), this will
+be indistinguishable from the real results of tallying the votes."""
