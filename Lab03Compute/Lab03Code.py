@@ -223,7 +223,7 @@ def simulate_poll(votes):
 # TASK Q2 -- Answer questions regarding your implementation
 #
 # Given your implementation of the private poll in TASK 5, how
-# would a malicious user implement encode_vote to (a) distrupt the
+# would a malicious user implement encode_vote to (a) disrupt the
 # poll so that it yields no result, or (b) manipulate the poll so 
 # that it yields an arbitrary result. Can those malicious actions 
 # be detected given your implementation?
