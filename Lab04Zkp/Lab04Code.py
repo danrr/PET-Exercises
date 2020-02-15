@@ -59,7 +59,7 @@ def proveKey(params, priv, pub):
     w = o.random()
     W = w * g
     c = to_challenge([g, W])
-    r = w - c * priv
+    r = (w - c * priv) % o
     return c, r
 
 
@@ -100,6 +100,7 @@ def proveCommitment(params, C, r, secrets):
     """
     (G, g, (h0, h1, h2, h3), o) = params
     x0, x1, x2, x3 = secrets
+    ## YOUR CODE HERE:
 
     w0 = o.random()
     w1 = o.random()
@@ -113,12 +114,11 @@ def proveCommitment(params, C, r, secrets):
     # c * C     =         cx0 * h0 + cx1 * h1 + cx2 * h2 + cx3 * h3 + cr * g
     # Cw_prime = c * C +   r0 * h0 +  r1 * h1 +  r2 * h2 +  r3 * h3 + rr * g
 
-    ## YOUR CODE HERE:
-    r0 = w0 - x0 * c % o
-    r1 = w1 - x1 * c % o
-    r2 = w2 - x2 * c % o
-    r3 = w3 - x3 * c % o
-    rr = wr - r * c % o
+    r0 = (w0 - x0 * c) % o
+    r1 = (w1 - x1 * c) % o
+    r2 = (w2 - x2 * c) % o
+    r3 = (w3 - x3 * c) % o
+    rr = (wr - r * c) % o
 
     return c, (r0, r1, r2, r3, rr)
 
@@ -197,19 +197,29 @@ def proveEnc(params, pub, Ciphertext, k, m):
     a, b = Ciphertext
 
     ## YOUR CODE HERE:
+    wk = o.random()
+    wm = o.random()
+    Wk = wk * g
+    Wm = wm * h0 + wk * pub
+    #  k * x * g + m * h0
+    c = to_challenge([pub, a, b, Wk, Wm])
 
-    return (c, (rk, rm))
+    rk = (wk - c * k) % o
+    rm = (wm - c * m) % o
+
+    return c, (rk, rm)
 
 
 def verifyEnc(params, pub, Ciphertext, proof):
     """ Verify the proof of correct encryption and knowledge of a ciphertext. """
-    (G, g, (h0, h1, h2, h3), o) = params
+    G, g, (h0, h1, h2, h3), o = params
     a, b = Ciphertext
-    (c, (rk, rm)) = proof
+    c, (rk, rm) = proof
+    Wk = rk * g + c * a  # (wk - c * k + c * k) * g
+    Wm = rm * h0 + c * b + rk * pub  # wm * h0 - c * m * h0 + c * k * pub  + c * m * h0 + wk * pub - c * k *pub
+    c_ = to_challenge([pub, a, b, Wk, Wm])
 
-    ## YOUR CODE HERE:
-
-    return  ## YOUR RETURN HERE
+    return c == c_
 
 
 #####################################################
