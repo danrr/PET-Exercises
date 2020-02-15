@@ -235,6 +235,7 @@ def relation(params, x1):
 
     x0 = (10 * x1 + 20)
     C = r * g + x1 * h1 + x0 * h0
+    # C = r * g + x1 * h1 + (10 * x1 + 20) * h0
 
     return C, x0, x1, r
 
@@ -245,18 +246,20 @@ def prove_x0eq10x1plus20(params, C, x0, x1, r):
 
     ## YOUR CODE HERE:
     wr = o.random()
-    w0 = o.random()
+    # w0 = o.random()
     w1 = o.random()
 
-    W = wr * g + w1 * h1 + w0 * h0
+    # C = r * g + x1 * h1 + x0 * h0 = r * g + x1 * h1 + (10 * x1 + 20) * h0
+
+    W = wr * g + w1 * h1 + 10 * w1 * h0  # we need the 10* to cancel out the product in the commitment
 
     c = to_challenge([g, h0, h1, C, W])
 
     rr = (wr - c * r) % o
-    r0 = (w0 - c * x0) % o
+    # r0 = (w0 - c * x0) % o
     r1 = (w1 - c * x1) % o
 
-    return c, (rr, r0, r1)
+    return c, (rr, r1)
 
 
 def verify_x0eq10x1plus20(params, C, proof):
@@ -264,12 +267,12 @@ def verify_x0eq10x1plus20(params, C, proof):
     (G, g, (h0, h1, h2, h3), o) = params
 
     ## YOUR CODE HERE:
-    c, (rr, r0, r1) = proof
-    # c * C = c * r * g + c * x1 * h1 + c * x0 * h0
+    c, (rr, r1) = proof
+    # c * C = c * r * g + c * x1 * h1 + c * 10 * x1 * h0 + c * 20 * h0
     # rr * g = wr * g - c * r * g
-    # r0 * h0 = w0 * h0 - c * r * h0
-    # r1 * h1 = w1 * h1 - c * r * h1
-    W_ = c * C + rr * g + r0 * h0 + r1 * h1
+    # r1 * h0 = w1 * h0 - c * x1 * h0
+    #      r1 * h1 = w1 * h1 - c * x1 * h1
+    W_ = c * C + rr * g + r1 * h1 + (10 * r1 - c * 20) * h0
 
     c_ = to_challenge([g, h0, h1, C, W_])
     return c == c_
