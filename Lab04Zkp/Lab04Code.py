@@ -169,9 +169,9 @@ def verifyDLEquality(params, K, L, proof):
     (G, g, (h0, h1, h2, h3), o) = params
     c, r = proof
 
-    ## YOUR CODE HERE:
+    c_ = to_challenge([g, h0, c * K + r * g, c * L + r * h0])
 
-    return  # YOUR RETURN HERE
+    return c == c_
 
 
 #####################################################
