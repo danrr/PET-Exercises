@@ -105,7 +105,7 @@ def add(params, pub, c1, c2):
     assert isCiphertext(params, c2)
     a1, b1 = c1
     a2, b2 = c2
-    return a1 + a2, b1 +b2
+    return a1 + a2, b1 + b2
 
 
 def mul(params, pub, c1, alpha):
