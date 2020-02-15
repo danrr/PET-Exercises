@@ -101,9 +101,26 @@ def proveCommitment(params, C, r, secrets):
     (G, g, (h0, h1, h2, h3), o) = params
     x0, x1, x2, x3 = secrets
 
-    ## YOUR CODE HERE:
+    w0 = o.random()
+    w1 = o.random()
+    w2 = o.random()
+    w3 = o.random()
+    wr = o.random()
 
-    return (c, responses)
+    W = w0 * h0 + w1 * h1 + w2 * h2 + w3 * h3 + wr * g
+
+    c = to_challenge([g, h0, h1, h2, h3, W])
+    # c * C     =         cx0 * h0 + cx1 * h1 + cx2 * h2 + cx3 * h3 + cr * g
+    # Cw_prime = c * C +   r0 * h0 +  r1 * h1 +  r2 * h2 +  r3 * h3 + rr * g
+
+    ## YOUR CODE HERE:
+    r0 = w0 - x0 * c % o
+    r1 = w1 - x1 * c % o
+    r2 = w2 - x2 * c % o
+    r3 = w3 - x3 * c % o
+    rr = wr - r * c % o
+
+    return c, (r0, r1, r2, r3, rr)
 
 
 def verifyCommitments(params, C, proof):
