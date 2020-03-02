@@ -96,7 +96,18 @@ def credential_EncryptUserSecret(params, pub, priv):
     #                     pub = priv * g}
 
     # TODO
+    wk = o.random()
+    wv = o.random()
+    wpriv = o.random()
 
+    Wk = wk * g
+    Wv = wv * g
+    Wpriv = wpriv * g
+    c = to_challenge([g, pub, a, b, Wk, Wv, Wpriv])
+
+    rk = (wk - k * c) % o
+    rv = (wv - v * c - priv * wk) % o
+    rpriv = (wpriv - priv * c) % o
     # Return the fresh v, the encryption of v and the proof.
     proof = (c, rk, rv, rpriv)
     return v, ciphertext, proof
