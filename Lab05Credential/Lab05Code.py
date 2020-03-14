@@ -403,6 +403,37 @@ def credential_show_pseudonym(params, issuer_pub_params, u, u_prime, v, service_
     pseudonym = v * N
 
     # TODO (use code from above and modify as necessary!)
+    alpha = o.random()
+    u, u_prime = (alpha * u, alpha * u_prime)
+
+    r, z1 = o.random(), o.random()
+    Cv = v * u + z1 * h
+    Cup = u_prime + r * g
+    V = r * (-g) + z1 * X1
+
+    tag = (u, Cv, Cup)
+
+    w_v = o.random()
+    w_r = o.random()
+    w_z1 = o.random()
+
+    W_Cv = w_v * u + w_z1 * h
+    W_V = w_r * (-g) + w_z1 * X1
+    W_pseudonym = w_v * N
+
+    c = to_challenge([g, h, u, X1, Cv,
+                      pseudonym,
+                      V,
+                      W_Cv,
+                      W_V,
+                      W_pseudonym,
+                      ])
+
+    r_v = (w_v - c * v) % o
+    r_r = (w_r - c * r) % o
+    r_z1 = (w_z1 - c * z1) % o
+
+    proof = (c, r_r, r_z1, r_v)
 
     return pseudonym, tag, proof
 
@@ -422,8 +453,23 @@ def credential_show_verify_pseudonym(params, issuer_params, pseudonym, tag, proo
     N = G.hash_to_point(service_name)
 
     # Verify the correct Show protocol and the correctness of the pseudonym
+    (c, r_r, r_z1, r_v) = proof
+    (u, Cv, Cup) = tag
 
-    # TODO (use code from above and modify as necessary!)
+    V = x0 * u + x1 * Cv - Cup  # as per paper
+    W_Cv = c * Cv + r_v * u + r_z1 * h
+    W_V = c * V + r_r * -g + r_z1 * X1
+    # W_pseudonym = w_v * N
+    W_pseudonym = c * pseudonym + r_v * N
+
+    # TODO
+    c_prime = to_challenge([g, h, u, X1, Cv,
+                            pseudonym,
+                            V,
+                            W_Cv,
+                            W_V,
+                            W_pseudonym,
+                            ])
 
     return c == c_prime
 
