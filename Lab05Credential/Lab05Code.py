@@ -100,13 +100,13 @@ def credential_EncryptUserSecret(params, pub, priv):
     wk = o.random()
     wpriv = o.random()
 
-    Wv = wv * g
     Wk = wk * g
+    Wv = wk * pub + wv * g
     Wpriv = wpriv * g
     c = to_challenge([g, pub, a, b, Wk, Wv, Wpriv])
 
     rk = (wk - k * c) % o
-    rv = (wv - v * c - priv * wk) % o
+    rv = (wv - v * c) % o
     rpriv = (wpriv - priv * c) % o
     # Return the fresh v, the encryption of v and the proof.
     proof = (c, rk, rv, rpriv)
@@ -123,7 +123,12 @@ def credential_VerifyUserSecret(params, pub, ciphertext, proof):
     (c, rk, rv, rpriv) = proof
 
     # Verify knowledge of the encrypted k, v and priv
+    # a = k * g
     Wap = c * a + rk * g
+
+    # b = k * pub + v * g and
+    # c * b = c * k * pub + c * v * g and
+    # Wbp = (c * k * pub + c * v * g) + (wk - k * c) * pub + (wv - v * c) * g
     Wbp = c * b + rk * pub + rv * g
     Wpubp = c * pub + rpriv * g
 
