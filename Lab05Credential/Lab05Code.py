@@ -299,8 +299,16 @@ def credential_show(params, issuer_pub_params, u, u_prime, v):
 
     # TODO 1
 
+    alpha = o.random()
+    u, u_prime = (alpha * u, alpha * u_prime)
+
     # 2) Implement the "Show" protocol (p.9) for a single attribute v.
-    #    Cv is a commitment to v and Cup is C_{u'} in the paper. 
+    #    Cv is a commitment to v and Cup is C_{u'} in the paper.
+
+    r, z1 = o.random(), o.random()
+    Cv = v * u + z1 * h
+    Cup = u_prime + r * g
+    V = r * (-g) + z1 * X1
 
     # TODO 2
 
@@ -313,8 +321,24 @@ def credential_show(params, issuer_pub_params, u, u_prime, v):
     #           V  = r * (-g) + z1 * X1 }
 
     # TODO proof
+    w_v = o.random()
+    w_r = o.random()
+    w_z1 = o.random()
 
-    proof = (c, rr, rz1, rv)
+    W_Cv = w_v * u + w_z1 * h
+    W_V = w_r * (-g) + w_z1 * X1
+
+    c = to_challenge([g, h, u, X1, Cv,
+                      V,
+                      W_Cv,
+                      W_V,
+                      ])
+
+    r_v = (w_v - c * v) % o
+    r_r = (w_r - c * r) % o
+    r_z1 = (w_z1 - c * z1) % o
+
+    proof = (c, r_r, r_z1, r_v)
     return tag, proof
 
 
@@ -329,10 +353,31 @@ def credential_show_verify(params, issuer_params, tag, proof):
     X1 = iparams
 
     # Verify proof of correct credential showing
-    (c, rr, rz1, rv) = proof
+    (c, r_r, r_z1, r_v) = proof
     (u, Cv, Cup) = tag
 
+
+    # Cv = v * u + z1 * h
+    # Cup = u_prime + r * g
+    # V = r * (-g) + z1 * X1
+
+    # W_Cv = w_v * u + w_z1 * h
+    # W_V = w_r * (-g) + w_z1 * X1
+
+    # r_v = (w_v - c * v) % o
+    # r_r = (w_r - c * r) % o
+    # r_z1 = (w_z1 - c * z1) % o
+
+    V = x0 * u + x1 * Cv - Cup  # as per paper
+    W_Cv = c * Cv + r_v * u + r_z1 * h
+    W_V = c * V + r_r * -g + r_z1 * X1
+
     # TODO
+    c_prime = to_challenge([g, h, u, X1, Cv,
+                            V,
+                            W_Cv,
+                            W_V,
+                            ])
 
     return c == c_prime
 
