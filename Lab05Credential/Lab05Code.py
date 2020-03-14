@@ -96,12 +96,12 @@ def credential_EncryptUserSecret(params, pub, priv):
     #                     pub = priv * g}
 
     # TODO
-    wk = o.random()
     wv = o.random()
+    wk = o.random()
     wpriv = o.random()
 
-    Wk = wk * g
     Wv = wv * g
+    Wk = wk * g
     Wpriv = wpriv * g
     c = to_challenge([g, pub, a, b, Wk, Wv, Wpriv])
 
@@ -148,22 +148,40 @@ def credential_Issuing(params, pub, ciphertext, issuer_params):
 
     # The public and private parameters of the issuer 
     (Cx0, iparams), (sk, x0_bar) = issuer_params
-    X1 = iparams
+    X1 = iparams  # x1 * h
     x0, x1 = sk
 
     # The ciphertext of the encrypted attribute v
-    a, b = ciphertext
+    # k = o.random()
+    # ciphertext = k * g, k * pub + v * g
+    ciphertext_a, ciphertext_b = ciphertext
 
     # 1) Create a "u" as u = b*g 
     # 2) Create a X1b as X1b == b * X1 == (b * x1) * h
     #     and x1b = (b * x1) mod o 
 
     # TODO 1 & 2
+    b = o.random()
+    u = b * g
+    X1b = b * X1
+    x1b = (b * x1) % o
 
     # 3) The encrypted MAC is u, and an encrypted u_prime defined as 
     #    E( (b*x0) * g + (x1 * b * v) * g ) + E(0; r_prime)
 
     # TODO 3
+
+    # r = o.random()
+    # ciphertext = r * g, r * pub + x * g
+
+    r_prime = o.random()
+    # E(0; r_prime)
+    a0, b0 = r_prime * g, r_prime * pub + 0 * g
+
+    # E( (b*x0) * g + (x1b * v) * g )
+    new_a = a0 + x1b * ciphertext_a
+    # g^(b*x_0) <=> (x_0*b)*g = x_0*(g*b) = x_0 *u
+    new_b = b0 + x0 * u + x1b * ciphertext_b
 
     ciphertext = new_a, new_b
 
@@ -178,6 +196,40 @@ def credential_Issuing(params, pub, ciphertext, issuer_params):
     #       Cx0 = x0 * g + x0_bar * h }
 
     # TODO proof
+
+    w_x1 = o.random()
+    w_beta = o.random()
+    w_x1b = o.random()
+    w_r_prime = o.random()
+    w_x0 = o.random()
+    w_x0_bar = o.random()
+
+    W_X1 = w_x1 * h
+    W_X1b_beta = w_beta * X1
+    W_X1b_x1b = w_x1b * h
+    W_u = w_beta * g
+    W_new_a = w_r_prime * g + w_x1b * ciphertext_a
+    W_new_b = w_r_prime * pub + w_x1b * ciphertext_b + w_x0 * u
+    W_Cx0 = w_x0 * g + w_x0_bar * h
+
+    c = to_challenge([g, h, pub, ciphertext_a, ciphertext_b, X1, X1b, new_a, new_b, Cx0,
+                      W_X1,
+                      W_X1b_beta,
+                      W_X1b_x1b,
+                      W_u,
+                      W_new_a,
+                      W_new_b,
+                      W_Cx0,
+                      ])
+
+    r_x1 = (w_x1 - c * x1) % o
+    r_beta = (w_beta - c * b) % o
+    r_x1b = (w_x1b - c * x1b) % o
+    r_r_prime = (w_r_prime - c * r_prime) % o
+    r_x0 = (w_x0 - c * x0) % o
+    r_x0_bar = (w_x0_bar - c * x0_bar) % o
+
+    rs = [r_x1, r_beta, r_x1b, r_r_prime, r_x0, r_x0_bar]
 
     proof = (c, rs, X1b)  # Where rs are multiple responses
 
